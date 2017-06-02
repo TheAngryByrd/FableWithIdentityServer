@@ -1,1 +1,4 @@
 FSharp.Core
+Microsoft.AspNetCore.Hosting
+Microsoft.AspNetCore.Server.Kestrel
+IdentityServer4

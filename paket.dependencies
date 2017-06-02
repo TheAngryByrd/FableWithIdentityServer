@@ -8,6 +8,10 @@ nuget FSharp.Core
 
 # Keep this version synced with dotnet-fable in .fsproj
 nuget Fable.Core 1.0.7
+nuget Giraffe
+nuget IdentityServer4
+nuget Microsoft.AspNetCore.Hosting
+nuget Microsoft.AspNetCore.Server.Kestrel
 
 group Build
     source https://www.nuget.org/api/v2
