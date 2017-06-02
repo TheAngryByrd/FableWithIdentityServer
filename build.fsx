@@ -4,17 +4,20 @@ open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
 open Fake.UserInputHelper
+open Fake.YarnHelper
 open System
 
 let release = LoadReleaseNotes "RELEASE_NOTES.md"
-let srcGlob = "src/**/*.fsproj"
+let srcServerGlob = "src/**/*Server.fsproj"
+let srcClientGlob = "src/**/*Client.fsproj"
 let testsGlob = "tests/**/*.fsproj"
 
 Target "Clean" (fun _ ->
     ["bin"; "temp" ;"dist"]
     |> CleanDirs
 
-    !! srcGlob
+    !! srcServerGlob
+    ++ srcClientGlob
     ++ testsGlob
     |> Seq.collect(fun p -> 
         ["bin";"obj"] 
@@ -24,21 +27,47 @@ Target "Clean" (fun _ ->
     |> CleanDirs
 
     )
+    
 
-Target "DotnetRestore" (fun _ ->
-    !! srcGlob
-    ++ testsGlob
-    |> Seq.iter (fun proj ->
-        DotNetCli.Restore (fun c ->
+let dotnet path cmd =
+    DotNetCli.RunCommand(fun c ->
+        { c with
+            WorkingDir = path
+        }
+    ) cmd
+let dotnetRestore proj =
+    DotNetCli.Restore (fun c ->
             { c with
                 Project = proj
-                //This makes sure that Proj2 references the correct version of Proj1
-                AdditionalArgs = [sprintf "/p:PackageVersion=%s" release.NugetVersion]
             }) 
-))
 
-Target "DotnetBuild" (fun _ ->
-    !! srcGlob
+
+
+Target "ClientRestore" (fun _ ->
+    Yarn (fun p ->
+            { p with
+                Command = Install Standard
+                // WorkingDirectory = "./src/FAKESimple.Web/"
+            })
+
+    !! srcClientGlob
+    |> Seq.iter dotnetRestore
+)
+
+Target "ServerRestore" (fun _ ->
+    !! srcServerGlob
+    ++ testsGlob
+    |> Seq.iter dotnetRestore
+)
+
+Target "ClientBuild" (fun _ ->
+    !! srcClientGlob
+    |> Seq.map IO.Path.GetDirectoryName
+    |> Seq.iter(fun p -> dotnet p "fable webpack -- -p")
+)
+
+Target "ServerBuild" (fun _ ->
+    !! srcServerGlob
     |> Seq.iter (fun proj ->
         DotNetCli.Build (fun c ->
             { c with
@@ -129,7 +158,7 @@ Target "WatchTests" (fun _ ->
 )
 
 Target "DotnetPack" (fun _ ->
-    !! srcGlob
+    !! srcServerGlob
     |> Seq.iter (fun proj ->
         DotNetCli.Pack (fun c ->
             { c with
@@ -167,14 +196,16 @@ Target "Release" (fun _ ->
 )
 
 "Clean"
-  ==> "DotnetRestore"
-  ==> "DotnetBuild"
+  ==> "ClientRestore"
+  ==> "ServerRestore"
+  ==> "ServerBuild"
+  ==> "ClientBuild"
   ==> "DotnetTest"
   ==> "DotnetPack"
   ==> "Publish"
   ==> "Release"
 
-"DotnetRestore"
+"ServerRestore"
  ==> "WatchTests"
 
-RunTargetOrDefault "DotnetPack"
+RunTargetOrDefault "DotnetTest"

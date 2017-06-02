@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp1.1;net45</TargetFrameworks>
+    <TargetFrameworks>netcoreapp1.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +14,6 @@
     <PackageReference Include="FSharp.Core" Version="4.1.*" />
     <PackageReference Include="FSharp.NET.Sdk" Version="1.0.*" PrivateAssets="All" />
     <PackageReference Include="Expecto" Version="5.0.0-*" />
-    <ProjectReference Include="../../src/FableWithIdentityServer/FableWithIdentityServer.fsproj" />
     <DotNetCliToolReference Include="dotnet-mono" Version="*" />
     <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
   </ItemGroup>
