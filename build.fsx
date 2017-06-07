@@ -7,6 +7,21 @@ open Fake.UserInputHelper
 open Fake.YarnHelper
 open System
 
+let execProcAndReturnMessages filename args =
+    let args' = args |> String.concat " "
+    ProcessHelper.ExecProcessAndReturnMessages 
+                (fun psi ->
+                    psi.FileName <- filename
+                    psi.Arguments <-args'
+                ) (TimeSpan.FromMinutes(1.))
+
+let pkill args =
+    execProcAndReturnMessages "pkill" args
+
+let killParentsAndChildren processId=
+    pkill [sprintf "-P %d" processId]
+
+
 let release = LoadReleaseNotes "RELEASE_NOTES.md"
 let srcServerGlob = "src/**/*Server.fsproj"
 let srcClientGlob = "src/**/*Client.fsproj"
@@ -77,6 +92,35 @@ Target "ServerBuild" (fun _ ->
             }) 
 ))
 
+Target "RunWebsite" (fun _ ->
+    let serversStart =
+        !! srcServerGlob
+        |> Seq.map IO.Path.GetDirectoryName
+        |> Seq.map(fun p -> async {
+            dotnet p "watch run"
+            }
+        )
+        |> Seq.map  Async.Catch
+        |> Seq.toList
+    let clientsStart = 
+        !! srcClientGlob
+        |> Seq.map IO.Path.GetDirectoryName
+        |> Seq.map(fun p -> async {
+            dotnet p "fable webpack-dev-server"
+        })
+        |> Seq.map  Async.Catch
+        |> Seq.toList
+
+    serversStart @ clientsStart |> Async.Parallel  |> Async.Ignore |> Async.RunSynchronously 
+    // Console.ReadLine() |> ignore
+    // if isWindows |> not then
+    //     startedProcesses
+    //     |> Seq.iter(fst >> killParentsAndChildren >> ignore )
+    // else
+    //     //Hope windows handles this right?
+    //     ()
+)
+
 let invoke f = f ()
 let invokeAsync f = async { f () }
 
@@ -127,19 +171,6 @@ Target "DotnetTest" (fun _ ->
     runTests id
     |> Seq.iter (invoke)
 )
-let execProcAndReturnMessages filename args =
-    let args' = args |> String.concat " "
-    ProcessHelper.ExecProcessAndReturnMessages 
-                (fun psi ->
-                    psi.FileName <- filename
-                    psi.Arguments <-args'
-                ) (TimeSpan.FromMinutes(1.))
-
-let pkill args =
-    execProcAndReturnMessages "pkill" args
-
-let killParentsAndChildren processId=
-    pkill [sprintf "-P %d" processId]
 
 
 Target "WatchTests" (fun _ ->
@@ -207,5 +238,8 @@ Target "Release" (fun _ ->
 
 "ServerRestore"
  ==> "WatchTests"
+"ClientRestore"
+ ==> "ServerRestore"
+ ==> "RunWebsite"
 
 RunTargetOrDefault "DotnetTest"

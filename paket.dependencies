@@ -1,17 +1,24 @@
 source https://www.nuget.org/api/v2
 
-
-nuget Fable.Elmish.Browser
-nuget Fable.Elmish.Debugger
-nuget Fable.Elmish.React
 nuget FSharp.Core
 
 # Keep this version synced with dotnet-fable in .fsproj
 nuget Fable.Core 1.0.7
+nuget Fable.Elmish.Browser
+nuget Fable.Elmish.Debugger
+nuget Fable.Elmish.React
+
+
+
 nuget Giraffe
 nuget IdentityServer4
+nuget IdentityServer4.AccessTokenValidation
+nuget Microsoft.AspNetCore.Cors
 nuget Microsoft.AspNetCore.Hosting
 nuget Microsoft.AspNetCore.Server.Kestrel
+nuget Microsoft.AspNetCore.StaticFiles
+nuget Microsoft.Extensions.Logging.Console
+nuget Microsoft.Extensions.Logging.Debug
 
 group Build
     source https://www.nuget.org/api/v2

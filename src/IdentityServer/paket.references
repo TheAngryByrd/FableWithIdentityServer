@@ -1,4 +1,9 @@
 FSharp.Core
+Giraffe
 Microsoft.AspNetCore.Hosting
 Microsoft.AspNetCore.Server.Kestrel
 IdentityServer4
+Microsoft.Extensions.Logging.Console
+Microsoft.Extensions.Logging.Debug
+Microsoft.AspNetCore.Cors
+Microsoft.AspNetCore.StaticFiles
