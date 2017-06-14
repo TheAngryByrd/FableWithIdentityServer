@@ -48,7 +48,10 @@ importAll "./css/site.styl"
 (importDefault "react-tap-event-plugin")()
 // let Oidc = importAll<OidcClient> "oidc-client"
 let inline (~%) x = createObj x
-
+let optionDefault d o =
+    match o with
+    | Some x -> x
+    | None -> d
 
 let iodcConfig : Oidc.UserManagerSettings =
     createObj [
@@ -85,6 +88,7 @@ type Foos =
 
 type Model = {
     Foo : Foos
+    Username : string
 }
 
 type Messages = 
@@ -93,6 +97,8 @@ type Messages =
 | Login
 | LoggedIn of unit
 | LoginFailed of exn
+| GotUser of User option
+| GetUserError of exn
 
 let pullPage url = promise {
     do! Async.Sleep(1000) |> Async.StartAsPromise
@@ -118,6 +124,15 @@ let pullPage url = promise {
 let pullPageCmd url = 
     Cmd.ofPromise pullPage url PulledPage FetchError
 
+
+let getUsername () = promise {
+    let! user = userManager.getUser()
+    return FSharp.Core.Option.ofObj user
+}
+let getUserNameCmd () =
+    Cmd.ofPromise getUsername () GotUser GetUserError
+
+
 let login (userManager : UserManager) = promise {
     try
         do! userManager.signinRedirect()
@@ -130,7 +145,11 @@ let login (userManager : UserManager) = promise {
 let loginCmd userManager =
     Cmd.ofPromise login userManager LoggedIn LoginFailed
 let init result =
-    {Foo = Inital ("loading...") } , pullPageCmd "/api/posts"
+    {Foo = Inital ("loading...") ; Username = "Anonymous"} , 
+        Cmd.batch [
+            pullPageCmd "/api/posts"
+            getUserNameCmd ()
+        ]
 
 
 let update message model =
@@ -148,6 +167,21 @@ let update message model =
         model, Cmd.Empty
     | LoginFailed e ->
         printfn "Login failed %A" e
+        model, Cmd.Empty
+    | GotUser uo ->
+        try
+            let p = 
+                uo 
+                |> FSharp.Core.Option.map(fun u -> u.profile |> string) 
+                |> optionDefault "What"
+            // let up = u.profile |> string
+            printfn "HAHAH"
+            { model with Username = p}, Cmd.Empty
+        with e -> 
+            printfn "%A" e
+            { model with Username = "error"}, Cmd.Empty
+    | GetUserError e -> 
+        printfn "GetUserError %A" e
         model, Cmd.Empty
     // model, Cmd.Empty
 
@@ -182,7 +216,8 @@ let root model dispatch =
                                 "label" ==> "Login"
                                 "primary" ==> true
                                 "onTouchTap" ==> (fun _ -> Login |> dispatch)
-                                ] []     
+                                ] []    
+                            R.label [] [unbox model.Username]
                         ]
                     ]
                     R.from flexbox.Row %["center" ==> "xs"] [
